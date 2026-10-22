@@ -1,0 +1,55 @@
+-- ==========================================================
+-- Project: Customer Data Cleansing Pipeline
+-- Description: This script standardizes raw customer data 
+--              (fixes text casing, handles nulls, parses dates, 
+--              and removes duplicates).
+-- Table Name: clean_customers
+-- ==========================================================
+CREATE TABLE raw_customers (
+  id INT,
+  name STRING,
+  email STRING,
+  age STRING,
+  country STRING,
+  signup_date STRING
+);
+INSERT INTO raw_customers VALUES
+(1, 'aLiCe', 'ALICE@MAIL.COM', '25', 'turkey', '2024-01-15'),
+(2, '  BOB ', 'bob@mail.com', '30', 'TURKEY', '15/02/2024'),
+(3, 'cHaRlIe', NULL, '28', 'Germany', '2024-03-10'),
+(4, 'dAvId', 'david@mail.com', 'unknown', 'germany', '2024-03-22'),
+(5, 'eVa', 'EVA@MAIL.COM', '22', NULL, '2024-04-01'),
+(6, 'aLiCe', 'ALICE@MAIL.COM', '25', 'turkey', '2024-01-15');
+SELECT name,
+CONCAT(UPPER(LEFT(TRIM(name), 1)), LOWER(SUBSTRING(TRIM(name), 2))) as new_name
+FROM raw_customers
+ORDER BY id;
+SELECT email,
+coalesce(LOWER(email), "no-email") as new_email
+FROM raw_customers
+ORDER BY id;
+SELECT country,
+coalesce(CONCAT(UPPER(LEFT(TRIM(country), 1)), LOWER(SUBSTRING(TRIM(country), 2))), "unknown") as new_country/*CONCAT: uç uca eklemek için, TRIM: kenar boşluklarını silmek için, SUBSTRING: istenilen parçayı kesip almak*/
+FROM raw_customers
+ORDER BY id;
+SELECT age,
+TRY_CAST(age AS INT) AS new_age/* TRY_CAST: bir veriyi başka bir tipe dönüştürür, başarısız olursa hata vermek yerine NULL döndürür; özellikle içinde harf veya bozuk veriler olduğunda*/
+FROM raw_customers
+ORDER BY id;
+SELECT DISTINCT * FROM raw_customers;/*DISTINCT: tekrar eden coloumnları kaldırır*/
+SELECT signup_date,
+COALESCE(TRY_TO_DATE(signup_date, 'dd/MM/yyyy'), TRY_TO_DATE(signup_date, 'yyyy-MM-dd')) AS new_date
+FROM raw_customers
+ORDER BY id;
+CREATE TABLE clean_customers AS
+SELECT
+id,
+CONCAT(UPPER(LEFT(TRIM(name), 1)), LOWER(SUBSTRING(TRIM(name), 2))) as new_name,
+coalesce(LOWER(email), "no-email") as new_email,
+TRY_CAST(age AS INT) AS new_age,
+coalesce(CONCAT(UPPER(LEFT(TRIM(country), 1)), LOWER(SUBSTRING(TRIM(country), 2))), "unknown") as new_country,
+COALESCE(TRY_TO_DATE(signup_date, 'dd/MM/yyyy'), TRY_TO_DATE(signup_date, 'yyyy-MM-dd')) AS new_date
+FROM raw_customers;
+SELECT DISTINCT new_name, new_email, new_age, new_country
+FROM clean_customers
+ORDER BY new_name;
